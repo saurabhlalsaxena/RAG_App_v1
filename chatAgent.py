@@ -1,6 +1,8 @@
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+%%writefile /content/chatAgent.py
+
 import streamlit as st
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Chroma
@@ -147,15 +149,15 @@ def question_answer(vectordb, question):
   result = qa_chain.invoke({"query": question})
   return result
 
+
 #Function to answer questions with memory
-def question_answerWithMemory (vectordb, question):
+def question_answerWithMemory (vectordb):
   from langchain.prompts import PromptTemplate
   from langchain_openai import ChatOpenAI
   from langchain.memory import ConversationBufferMemory
   from langchain.chains import ConversationalRetrievalChain
-  
+
   llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
-  print(question)
 
   memory = ConversationBufferMemory(
       memory_key="chat_history",
@@ -169,8 +171,7 @@ def question_answerWithMemory (vectordb, question):
       retriever=retriever,
       memory=memory
   )
-  result = qa.invoke({"question": question})
-  return result
+  return qa
 
 
 #Function to load PDF
@@ -201,7 +202,7 @@ def main():
       temp_file = loadpdf(uploaded_file)
       loader = PyPDFLoader(temp_file)
       pages = loader.load()
-  
+
   #Managing new document uploads
   if uploaded_file is None:
     if 'vs' in st.session_state:
@@ -214,6 +215,7 @@ def main():
         chunks = get_tokenSplit(pages)
         sectionSummaries, stringSectionSummaries = get_sectionSummaries(chunks)
         book_summary = get_bookSummaries(stringSectionSummaries)
+
 
     #print(book_summary.content)
     summary = book_summary.content
@@ -232,10 +234,12 @@ def main():
   if text is not None and text !="" and 'vs' in st.session_state:
       question= text
       vectordb = st.session_state.vs
-      result = question_answerWithMemory(vectordb, question)
+      if 'qa_chain' not in st.session_state:
+        st.session_state.qa_chain = question_answerWithMemory(vectordb)
+      result = st.session_state.qa_chain.invoke({"question": question})
       st.session_state.chat_history.append(HumanMessage(content=question))
       st.session_state.chat_history.append(AIMessage(content=result['answer']))
-      
+
   # conversation
   for message in st.session_state.chat_history:
       if isinstance(message, AIMessage):
