@@ -196,10 +196,16 @@ def main():
           AIMessage(content="Welcome! 🌟 Feel free to upload a document, and I'll assist you with any questions or insights you need. Whether it's summarizing content, answering queries, or discussing key points, I'm here to help enhance your understanding. Simply upload your document, and let's get started on our insightful journey together!"),
       ]
 
-  if uploaded_file and 'vs' not in st.session_state:
-    temp_file = loadpdf(uploaded_file)
-    loader = PyPDFLoader(temp_file)
-    pages = loader.load()
+  if uploaded_file:
+    if 'vs' not in st.session_state:
+      temp_file = loadpdf(uploaded_file)
+      loader = PyPDFLoader(temp_file)
+      pages = loader.load()
+  
+  #Managing new document uploads
+  if uploaded_file is None:
+    if 'vs' in st.session_state:
+      del st.session_state.vs
 
   if uploaded_file and 'vs' not in st.session_state:
     #Call functions for summarisation
